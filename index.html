@@ -46,7 +46,7 @@
 
         async function cargarPartidos() {
             try {
-                const respuesta = await fetch("https://tennis-predictor-backend.onrender.com");
+                const respuesta = await fetch("https://tennis-predictor-backend.onrender.com/api/partidos");
                 const datos = await respuesta.json();
 
                 console.log("DATOS RECIBIDOS:", datos);
