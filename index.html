@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tennis Predictor 2026</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h1>🎾 TENNIS PREDICTOR</h1>
+        <p class="subtitle">Predicciones Inteligentes & Probabilidades de Tenis</p>
+        <p class="guide-text">Analizamos datos en tiempo real de torneos ATP/WTA para determinar el porcentaje de victoria estimado según rendimiento y rendimiento histórico.</p>
+    </header>
+
+    <main>
+        <div class="section-header">
+            <span class="section-title">🔥 Próximos Partidos Destacados</span>
+        </div>
+
+        <div id="partidos">Cargando partidos...</div>
+    </main>
+
+    <script>
+        // Función para traducir superficies técnicas a un formato amigable
+        function formatearSuperficie(superficie) {
+            if (!superficie) return "🟦 Pista Dura (Hard)";
+
+            const supLower = superficie.toLowerCase();
+
+            if (supLower.includes("clay")) {
+                return "🧱 Tierra Batida (Arcilla)";
+            } else if (supLower.includes("grass")) {
+                return "🌿 Césped (Hierba)";
+            } else if (supLower.includes("i.hard") || supLower.includes("indoor")) {
+                return "🏟️ Pista Cubierta (Indoor)";
+            } else if (supLower.includes("carpet")) {
+                return "🧵 Moqueta / Sintética";
+            } else if (supLower.includes("hard")) {
+                return "🟦 Pista Dura (Hard)";
+            }
+
+            return `🎾 ${superficie}`;
+        }
+
+        async function cargarPartidos() {
+            try {
+                const respuesta = await fetch("http://localhost:3000/api/partidos");
+                const datos = await respuesta.json();
+
+                console.log("DATOS RECIBIDOS:", datos);
+
+                const contenedor = document.getElementById("partidos");
+                contenedor.innerHTML = "";
+
+                const partidos = Array.isArray(datos) 
+                    ? datos 
+                    : (datos.matches || datos.data || datos.results || []);
+
+                if (!partidos || partidos.length === 0) {
+                    contenedor.innerHTML = `<p class="mensaje-estado">❌ No se encontraron partidos disponibles en este momento.</p>`;
+                    return;
+                }
+
+                partidos.forEach(partido => {
+                    const jugador1 = partido.player1?.name || partido.homeTeam?.name || "Jugador 1";
+                    const jugador2 = partido.player2?.name || partido.awayTeam?.name || "Jugador 2";
+
+                    const prob1 = partido.predictionSummary?.player1ImpliedProbability || partido.probabilities?.home || 0;
+                    const prob2 = partido.predictionSummary?.player2ImpliedProbability || partido.probabilities?.away || 0;
+
+                    let ganador = jugador1;
+                    let probabilidad = prob1;
+
+                    if (Number(prob2) > Number(prob1)) {
+                        ganador = jugador2;
+                        probabilidad = prob2;
+                    }
+
+                    // Formateamos la superficie con nuestra función
+                    const superficieTexto = formatearSuperficie(partido.court || partido.surface);
+
+                    const tarjeta = document.createElement("div");
+                    tarjeta.className = "partido";
+
+                    tarjeta.innerHTML = `
+                        <div class="match-header">
+                            <span class="player-name player-left">${jugador1}</span>
+                            <span class="vs-badge">VS</span>
+                            <span class="player-name player-right">${jugador2}</span>
+                        </div>
+
+                        <div class="prediction-box">
+                            <div class="winner-row">
+                                <span class="winner-label">🏆 Favorito a ganar:</span>
+                                <span class="winner-name">${ganador}</span>
+                            </div>
+
+                            <div class="prob-container">
+                                <div class="prob-header">
+                                    <span style="color: #94a3b8;">Probabilidad estimada de victoria:</span>
+                                    <span style="color: #4ade80; font-weight: 800;">${probabilidad}%</span>
+                                </div>
+                                <div class="prob-bar-bg">
+                                    <div class="prob-bar-fill" style="width: ${probabilidad}%;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="match-footer">
+                            <span class="badge badge-surface">Superficie: <strong>${superficieTexto}</strong></span>
+                            <span class="badge badge-h2h">Historial directo (H2H): <strong>${partido.h2h || "0-0"}</strong></span>
+                        </div>
+                    `;
+
+                    contenedor.appendChild(tarjeta);
+                });
+
+            } catch (error) {
+                console.error("ERROR COMPLETO:", error);
+                document.getElementById("partidos").innerHTML = `
+                    <p class="mensaje-estado">❌ Error al conectar con el servidor: ${error.message}</p>
+                `;
+            }
+        }
+
+        cargarPartidos();
+        setInterval(cargarPartidos, 300000);
+    </script>
+</body>
+</html>
